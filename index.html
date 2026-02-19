@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kaleido - kaleidoscope painter</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="alternate icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #fffbeb;
+            color: #78350f;
+            line-height: 1.6;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulance type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 2rem 1rem 2rem;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            text-transform: lowercase;
+            color: #78350f;
+            margin-bottom: 0.75rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            color: #92400e;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2.5rem;
+            margin-bottom: 2rem;
+            align-items: start;
+        }
+
+        .controls-panel {
+            background: white;
+            padding: 2rem;
+            border: 2px solid #78350f;
+            box-shadow: 6px 6px 0px rgba(120, 53, 15, 0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .controls-row {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .control-section {
+            padding-bottom: 1.75rem;
+            border-bottom: 2px solid #fef3c7;
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .control-section h3 {
+            font-size: 1rem;
+            font-weight: 900;
+            text-transform: lowercase;
+            color: #1d4ed8;
+            margin-bottom: 1rem;
+        }
+
+        .color-picker {
+            width: 100%;
+            height: 50px;
+            border: 2px solid #78350f;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.875rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            border: 2px solid #78350f;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+            margin-bottom: 0.625rem;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+            box-shadow: 3px 3px 0px rgba(120, 53, 15, 0.15);
+        }
+
+        .btn:last-child { margin-bottom: 0; }
+
+        .btn:hover:not(:disabled):not(.btn-surprise):not(.btn-secondary) {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 4px 4px 0px rgba(120, 53, 15, 0.2);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #78350f;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #fff4ca !important;
+            color: #78350f !important;
+            transform: translateY(-2px);
+            box-shadow: 4px 4px 0px rgba(120, 53, 15, 0.2);
+        }
+
+        .btn-surprise {
+            background: linear-gradient(135deg, #5C81F6 0%, #9B87F5 100%);
+            border: 2px solid #78350f;
+            color: white;
+            font-size: 0.875rem;
+            margin-bottom: 0.625rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-surprise:last-child { margin-bottom: 0; }
+
+        .btn-surprise:hover:not(:disabled) {
+            background: linear-gradient(135deg, #4A6FD4 0%, #8975D3 100%) !important;
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 4px 4px 0px rgba(120, 53, 15, 0.2);
+        }
+
+        .sparkle {
+            position: absolute;
+            pointer-events: none;
+            animation: sparkle-anim 0.7s ease forwards;
+            font-size: 1.1rem;
+        }
+
+        @keyframes sparkle-anim {
+            0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+            50%  { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+            100% { opacity: 0; transform: translate(-50%, -120%) scale(1); }
+        }
+
+        .tool-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.625rem;
+        }
+
+        .tool-btn {
+            padding: 0.75rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            border: 2px solid #78350f;
+            background: white;
+            color: #78350f;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            box-shadow: 2px 2px 0px rgba(120, 53, 15, 0.15);
+        }
+
+        .tool-btn.active { background: #2563eb; color: white; }
+        .tool-btn:hover { transform: translateY(-1px); box-shadow: 3px 3px 0px rgba(120, 53, 15, 0.2); }
+
+        .segments-selector {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+
+        .seg-btn {
+            padding: 0.6rem 0.25rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            border: 2px solid #78350f;
+            background: white;
+            color: #78350f;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            box-shadow: 2px 2px 0px rgba(120, 53, 15, 0.15);
+            text-align: center;
+        }
+
+        .seg-btn.active { background: #2563eb; color: white; }
+        .seg-btn:hover { transform: translateY(-1px); }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.625rem;
+            margin-bottom: 0.625rem;
+        }
+
+        .btn-row .btn { margin-bottom: 0; }
+
+        .brush-inline {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            align-items: end;
+        }
+
+        .inline-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            color: #78350f;
+            margin-bottom: 0.375rem;
+        }
+
+        .color-picker-sm {
+            width: 100%;
+            height: 42px;
+            border: 2px solid #78350f;
+            border-radius: 4px;
+            cursor: pointer;
+            display: block;
+        }
+
+        .slider-group {
+            margin-bottom: 0.75rem;
+        }
+
+        .slider-group:last-child { margin-bottom: 0; }
+
+        .slider-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            color: #78350f;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: #fef3c7;
+            outline: none;
+            border: 2px solid #78350f;
+            -webkit-appearance: none;
+            border-radius: 4px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #2563eb;
+            cursor: pointer;
+            border: 2px solid #78350f;
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #2563eb;
+            cursor: pointer;
+            border: 2px solid #78350f;
+            border-radius: 50%;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+            border: 2px solid #78350f;
+            box-shadow: 6px 6px 0px rgba(120, 53, 15, 0.15);
+            background: white;
+            width: 100%;
+            min-height: 700px;
+        }
+
+        #canvasContainer canvas {
+            border: 2px solid #78350f !important;
+            cursor: crosshair;
+            display: block;
+        }
+
+        footer {
+            background: white;
+            border-top: 2px solid #78350f;
+            padding: 2rem;
+            text-align: center;
+            width: 100%;
+            margin-top: 2rem;
+        }
+
+        .contact-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            text-decoration: none;
+            border: 2px solid #78350f;
+            transition: all 0.3s;
+            box-shadow: 4px 4px 0px rgba(120, 53, 15, 0.2);
+        }
+
+        .contact-btn:hover { transform: translateY(-2px); box-shadow: 6px 6px 0px rgba(120, 53, 15, 0.25); }
+        .contact-btn.email     { background: #2563eb; color: white; }
+        .contact-btn.portfolio { background: #78350f; color: white; }
+        .contact-btn.linkedin  { background: #fef3c7; color: #78350f; }
+
+        footer p {
+            color: #92400e;
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: lowercase;
+            margin: 0.25rem 0;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout { grid-template-columns: 280px 1fr; gap: 1.5rem; }
+            .controls-panel { padding: 1.5rem; }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+            .subtitle { font-size: 1rem; margin-bottom: 2rem; }
+            .main-layout { grid-template-columns: 1fr; gap: 1.5rem; }
+            .controls-panel { padding: 1.5rem; gap: 1.25rem; position: static; }
+            .control-section { padding-bottom: 1.25rem; border-bottom: 2px solid #fef3c7; }
+            .control-section:last-child { border-bottom: none; padding-bottom: 0; }
+            .canvas-container { padding: 2rem; min-height: 500px; }
+            .contact-links { flex-direction: column; align-items: stretch; gap: 1rem; }
+            .contact-btn { width: 100%; justify-content: center; }
+            footer { padding: 1.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>kaleido</h1>
+        <p class="subtitle">▪ paint once, reflect everywhere ▪</p>
+
+        <div class="main-layout">
+            <div class="controls-panel">
+                <div class="controls-row">
+
+                    <div class="control-section">
+                        <h3>drawing</h3>
+                        <div class="tool-selector" style="margin-bottom:1rem;">
+                            <button class="tool-btn active" onclick="setBrushType('circle', this)">● dot</button>
+                            <button class="tool-btn" onclick="setBrushType('square', this)">■ square</button>
+                            <button class="tool-btn" onclick="setBrushType('line', this)">╱ line</button>
+                            <button class="tool-btn" onclick="setBrushType('erase', this)">⌫ erase</button>
+                        </div>
+                        <div class="brush-inline">
+                            <div>
+                                <label class="inline-label">color</label>
+                                <input type="color" id="brushColor" class="color-picker-sm" value="#2563eb">
+                            </div>
+                            <div>
+                                <label class="inline-label">size: <span id="brushSizeVal">10</span>px</label>
+                                <input type="range" id="brushSize" min="2" max="60" value="10">
+                            </div>
+                        </div>
+                        <div class="slider-group">
+                            <label>opacity: <span id="opacityVal">90</span>%</label>
+                            <input type="range" id="opacity" min="5" max="100" value="90">
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <h3>symmetry</h3>
+                        <div class="segments-selector">
+                            <button class="seg-btn" onclick="setSegments(2, this)">2</button>
+                            <button class="seg-btn" onclick="setSegments(4, this)">4</button>
+                            <button class="seg-btn" onclick="setSegments(6, this)">6</button>
+                            <button class="seg-btn active" onclick="setSegments(8, this)">8</button>
+                            <button class="seg-btn" onclick="setSegments(10, this)">10</button>
+                            <button class="seg-btn" onclick="setSegments(12, this)">12</button>
+                            <button class="seg-btn" onclick="setSegments(16, this)">16</button>
+                            <button class="seg-btn" onclick="setSegments(24, this)">24</button>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <h3>templates</h3>
+                        <button class="btn btn-surprise" onclick="surpriseMe(event)">✨ surprise me!</button>
+                    </div>
+
+                    <div class="control-section">
+                        <h3>actions</h3>
+                        <div class="btn-row">
+                            <button class="btn btn-secondary" onclick="undoLast()">↩ undo</button>
+                            <button class="btn btn-secondary" onclick="redoLast()">↪ redo</button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="clearCanvas()">clear canvas</button>
+                    </div>
+
+                    <div class="control-section">
+                        <h3>save</h3>
+                        <button class="btn btn-secondary" onclick="saveArt()">download artwork</button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="canvas-container" id="canvasContainer"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="contact-links">
+            <a href="/cdn-cgi/l/email-protection#c3adb0f1f1f1fa83a0acb1ada6afafeda6a7b6" class="contact-btn email"><span>✉</span><span>email</span></a>
+            <a href="https://naishasrivastava.github.io/" target="_blank" class="contact-btn portfolio"><span>★</span><span>portfolio</span></a>
+            <a href="https://www.linkedin.com/in/naishasrivastava" target="_blank" class="contact-btn linkedin"><span>in</span><span>linkedin</span></a>
+        </div>
+        <p>made with ♥ by naisha srivastava</p>
+        <p>© 2026</p>
+    </footer>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+        let pg;           // persistent graphics layer
+        let segments = 8;
+        let brushSize = 12;
+        let brushAlpha = 230;
+        let brushType = 'circle';
+        let brushCol;
+        let canvasSize;
+        let strokes = [];
+        let redoStack = [];
+        let currentStroke = [];
+        let isDown = false;
+        let lastMX, lastMY;
+
+        function setup() {
+            const cw = document.querySelector('.canvas-container').clientWidth;
+            canvasSize = Math.min(cw - 150, 720);
+            // Make it square and even
+            canvasSize = Math.floor(canvasSize / 2) * 2;
+
+            let cnv = createCanvas(canvasSize, canvasSize);
+            cnv.parent('canvasContainer');
+
+            pg = createGraphics(canvasSize, canvasSize);
+            pg.background(255);
+
+            brushCol = color('#2563eb');
+
+            document.getElementById('brushSize').addEventListener('input', e => {
+                brushSize = parseInt(e.target.value);
+                document.getElementById('brushSizeVal').textContent = brushSize;
+            });
+
+            document.getElementById('opacity').addEventListener('input', e => {
+                const pct = parseInt(e.target.value);
+                brushAlpha = Math.round(pct * 2.55);
+                document.getElementById('opacityVal').textContent = pct;
+            });
+
+            document.getElementById('brushColor').addEventListener('input', e => {
+                brushCol = color(e.target.value);
+            });
+
+            noLoop();
+        }
+
+        function draw() {
+            // Composite: white bg + persistent layer
+            background(255);
+            image(pg, 0, 0);
+
+            // Guide lines (subtle) when not painting
+            if (!isDown) {
+                push();
+                translate(width / 2, height / 2);
+                stroke(200, 200, 220, 60);
+                strokeWeight(0.5);
+                for (let i = 0; i < segments; i++) {
+                    const a = (TWO_PI / segments) * i;
+                    line(0, 0, cos(a) * width, sin(a) * height);
+                }
+                pop();
+            }
+        }
+
+        function mousePressed() {
+            if (outOfBounds()) return;
+            isDown = true;
+            lastMX = mouseX;
+            lastMY = mouseY;
+            currentStroke = [];
+            paintAt(mouseX, mouseY, mouseX, mouseY);
+            redraw();
+        }
+
+        function mouseDragged() {
+            if (!isDown || outOfBounds()) return;
+            paintAt(lastMX, lastMY, mouseX, mouseY);
+            lastMX = mouseX;
+            lastMY = mouseY;
+            redraw();
+        }
+
+        function mouseReleased() {
+            if (!isDown) return;
+            isDown = false;
+            if (currentStroke.length > 0) {
+                strokes.push(currentStroke);
+                redoStack = []; // new action clears redo history
+            }
+            redraw();
+        }
+
+        function mouseMoved() {
+            if (!isDown) redraw(); // keep guide lines live
+        }
+
+        function outOfBounds() {
+            return mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height;
+        }
+
+        function paintAt(fromX, fromY, toX, toY) {
+            const cmd = { fromX, fromY, toX, toY, segments, brushSize, brushType, alpha: brushAlpha, col: [red(brushCol), green(brushCol), blue(brushCol)] };
+            currentStroke.push(cmd);
+            applyCmd(pg, cmd);
+        }
+
+        function applyCmd(g, cmd) {
+            const cx = canvasSize / 2;
+            const cy = canvasSize / 2;
+
+            // Translate coordinates to be relative to centre
+            const fx = cmd.fromX - cx;
+            const fy = cmd.fromY - cy;
+            const tx = cmd.toX   - cx;
+            const ty = cmd.toY   - cy;
+
+            g.push();
+            g.translate(cx, cy);
+
+            for (let i = 0; i < cmd.segments; i++) {
+                const angle = (TWO_PI / cmd.segments) * i;
+                g.push();
+                g.rotate(angle);
+
+                applyMark(g, fx, fy, tx, ty, cmd);
+
+                // Mirror
+                g.scale(1, -1);
+                applyMark(g, fx, fy, tx, ty, cmd);
+
+                g.pop();
+            }
+
+            g.pop();
+        }
+
+        function applyMark(g, fx, fy, tx, ty, cmd) {
+            const [r, gr, b] = cmd.col;
+            const sz = cmd.brushSize;
+
+            if (cmd.brushType === 'erase') {
+                g.erase();
+                g.noStroke();
+                g.ellipse(tx, ty, sz * 2);
+                g.noErase();
+                return;
+            }
+
+            g.noStroke();
+            g.fill(r, gr, b, cmd.alpha);
+
+            if (cmd.brushType === 'circle') {
+                // Smooth line between last and current using ellipses
+                const steps = max(1, floor(dist(fx, fy, tx, ty) / 2));
+                for (let s = 0; s <= steps; s++) {
+                    const x = lerp(fx, tx, s / steps);
+                    const y = lerp(fy, ty, s / steps);
+                    g.ellipse(x, y, sz);
+                }
+            } else if (cmd.brushType === 'square') {
+                const steps = max(1, floor(dist(fx, fy, tx, ty) / 2));
+                for (let s = 0; s <= steps; s++) {
+                    const x = lerp(fx, tx, s / steps);
+                    const y = lerp(fy, ty, s / steps);
+                    g.rect(x - sz / 2, y - sz / 2, sz, sz);
+                }
+            } else if (cmd.brushType === 'line') {
+                g.stroke(r, gr, b, cmd.alpha);
+                g.strokeWeight(sz / 3);
+                g.noFill();
+                g.line(fx, fy, tx, ty);
+            }
+        }
+
+        // ── Controls ─────────────────────────────────────────────────
+
+        function setBrushType(type, el) {
+            brushType = type;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            if (el) el.classList.add('active');
+        }
+
+        function setSegments(n, el) {
+            segments = n;
+            document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+            if (el) el.classList.add('active');
+            redraw();
+        }
+
+        function undoLast() {
+            if (strokes.length === 0) return;
+            redoStack.push(strokes.pop());
+            rebuildCanvas();
+        }
+
+        function redoLast() {
+            if (redoStack.length === 0) return;
+            strokes.push(redoStack.pop());
+            rebuildCanvas();
+        }
+
+        function clearCanvas() {
+            strokes = [];
+            currentStroke = [];
+            redoStack = [];
+            pg.background(255);
+            redraw();
+        }
+
+        function rebuildCanvas() {
+            pg.background(255);
+            for (let stroke of strokes) {
+                for (let cmd of stroke) {
+                    applyCmd(pg, cmd);
+                }
+            }
+            redraw();
+        }
+
+        // ── Surprise Me ──────────────────────────────────────────────
+
+        function surpriseMe(e) {
+            sparkleBtn(e);
+            clearCanvas();
+
+            // Pick random segments
+            const segOptions = [4, 6, 8, 10, 12, 16];
+            segments = random(segOptions);
+            document.querySelectorAll('.seg-btn').forEach(b => {
+                b.classList.toggle('active', parseInt(b.textContent) === segments);
+            });
+
+            // Random palette
+            const palettes = [
+                ['#2563eb', '#9B87F5', '#06b6d4', '#fde68a'],
+                ['#ef4444', '#f97316', '#fde68a', '#78350f'],
+                ['#22c55e', '#06b6d4', '#2563eb', '#ffffff'],
+                ['#ec4899', '#9B87F5', '#f97316', '#fffbeb'],
+                ['#78350f', '#92400e', '#fde68a', '#2563eb'],
+            ];
+            const pal = random(palettes);
+
+            // Paint several random strokes
+            const numStrokes = floor(random(12, 30));
+            for (let s = 0; s < numStrokes; s++) {
+                const cx = canvasSize / 2;
+                const cy = canvasSize / 2;
+                const maxR = canvasSize * 0.42;
+                const angle = random(TWO_PI);
+                const r1 = random(maxR * 0.05, maxR);
+                const r2 = r1 + random(-60, 60);
+                const x1 = cx + cos(angle) * r1;
+                const y1 = cy + sin(angle) * r1;
+                const x2 = cx + cos(angle + random(-0.4, 0.4)) * max(10, r2);
+                const y2 = cy + sin(angle + random(-0.4, 0.4)) * max(10, r2);
+
+                brushCol = color(random(pal));
+                brushAlpha = floor(random(100, 220));
+                brushSize = floor(random(4, 32));
+                brushType = random(['circle', 'circle', 'square', 'line']);
+
+                const cmd = {
+                    fromX: x1, fromY: y1, toX: x2, toY: y2,
+                    segments, brushSize, brushType,
+                    alpha: brushAlpha,
+                    col: [red(brushCol), green(brushCol), blue(brushCol)]
+                };
+                const stroke = [cmd];
+                strokes.push(stroke);
+                applyCmd(pg, cmd);
+            }
+
+            redraw();
+        }
+
+        function saveArt() {
+            // Export just the pg layer — no guide lines
+            const exportCanvas = pg.elt;
+            const link = document.createElement('a');
+            link.download = 'kaleido.png';
+            link.href = exportCanvas.toDataURL();
+            link.click();
+        }
+
+        function sparkleBtn(e) {
+            if (!e) return;
+            const btn = e.currentTarget;
+            const emojis = ['✨', '⭐', '💫', '🌟', '✦'];
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const span = document.createElement('span');
+                    span.className = 'sparkle';
+                    span.textContent = emojis[floor(random(emojis.length))];
+                    span.style.left = (15 + Math.random() * 70) + '%';
+                    span.style.top  = (15 + Math.random() * 70) + '%';
+                    btn.appendChild(span);
+                    setTimeout(() => span.remove(), 700);
+                }, i * 100);
+            }
+        }
+
+        function windowResized() {
+            const cw = document.querySelector('.canvas-container').clientWidth;
+            const newSize = Math.floor(Math.min(cw - 150, 720) / 2) * 2;
+            if (newSize !== canvasSize) {
+                const scale = newSize / canvasSize;
+                canvasSize = newSize;
+                resizeCanvas(canvasSize, canvasSize);
+
+                const newPg = createGraphics(canvasSize, canvasSize);
+                newPg.background(255);
+                newPg.image(pg, 0, 0, canvasSize, canvasSize);
+                pg = newPg;
+
+                redraw();
+            }
+        }
+    </script>
+</body>
+</html>
